@@ -16,6 +16,12 @@ const WHITELIST: &[&str] = &[
     r"C:\Program Files\Mozilla Firefox\firefox.exe",
     r"C:\Windows\System32\curl.exe",
     r"/usr/bin/curl",
+    r"/Applications/Google Chrome.app",
+    r"/Applications/Visual Studio Code.app",
+    r"Lark Helper",
+    r"Code Helper",
+    r"Google Chrome Helper",
+    r"curl",
 ];
 
 // 获取 TCP 连接对应的进程 ID
@@ -158,7 +164,8 @@ async fn main() -> Result<()> {
         let whitelist = whitelist.clone();
         tokio::spawn(async move {
             if let Err(e) = handle_client(stream, &whitelist).await {
-                eprintln!("Error handling client {}: {:?}", peer_addr, e);
+                // eprintln!("Error handling client {}: {:?}", peer_addr, e);
+                eprintln!("Error handling client {}: ", peer_addr);
             }
         });
     }

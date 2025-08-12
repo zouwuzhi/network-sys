@@ -11,11 +11,13 @@ socket2 = { version = "0.5", features = ["all"] }
 libc = "0.2.141"
 
 
+sysctl = { version = "0.5" } # macOS
+libproc = { version = "0.14" } # macOS
 
 
 [target.'cfg(macos)'.dependencies]
 libproc = { version = "0.14" } # macOS
-sysctl = { version = "0.5" } # macOS
+sysctl = { version = "0.6" } # macOS
 
 [target.'cfg(linux)'.dependencies]
 netlink-packet-core = "0.7"
