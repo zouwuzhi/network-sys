@@ -11,15 +11,16 @@ socket2 = { version = "0.5", features = ["all"] }
 libc = "0.2.141"
 
 
-netlink-packet-core = "0.7"
-netlink-packet-sock-diag = "0.4"
-netlink-sys = {version = "0.8",features = ["tokio_socket"] }
+
 
 [target.'cfg(macos)'.dependencies]
 libproc = { version = "0.14" } # macOS
 sysctl = { version = "0.5" } # macOS
 
 [target.'cfg(linux)'.dependencies]
+netlink-packet-core = "0.7"
+netlink-packet-sock-diag = "0.4"
+netlink-sys = {version = "0.8",features = ["tokio_socket"] }
 
 
 [target.'cfg(windows)'.dependencies]

@@ -1,5 +1,4 @@
-// mod platform;
-pub mod linux;
+mod sys;
 
 use anyhow::{Context, Result};
 use std::collections::HashSet;
@@ -9,16 +8,14 @@ use std::time::Instant;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
-use crate::linux::{get_process_id_by_local_port, get_process_path};
-
-// use crate::platform::{get_process_id_by_local_port, get_process_path};
+use crate::sys::macos::find_process_name;
 
 // 白名单：允许的程序路径
 const WHITELIST: &[&str] = &[
     r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
     r"C:\Program Files\Mozilla Firefox\firefox.exe",
     r"C:\Windows\System32\curl.exe",
-    r"/usr/bin/curl"
+    r"/usr/bin/curl",
 ];
 
 // 获取 TCP 连接对应的进程 ID
@@ -38,33 +35,35 @@ async fn handle_client(mut stream: TcpStream, whitelist: &HashSet<String>) -> Re
 
     let instant = Instant::now();
     // let pid = get_process_id_by_local_port(peer_addr.port())?;
-    let pid = get_process_id_by_local_port(peer_addr.ip(), peer_addr.port())
-        .await?
-        .unwrap_or_default();
-    println!(
-        "get_process_id_by_local_port : pid:{pid} from {:?} to {:?} ({}mics)",
-        peer_addr,
-        local_addr,
-        instant.elapsed().as_micros()
-    );
+    // let pid = get_process_id_by_local_port(peer_addr.ip(), peer_addr.port())
+    //     .await?
+    //     .unwrap_or_default();
+    // println!(
+    //     "get_process_id_by_local_port : pid:{pid} from {:?} to {:?} ({}mics)",
+    //     peer_addr,
+    //     local_addr,
+    //     instant.elapsed().as_micros()
+    // );
 
     let instant = Instant::now();
     // let process_path = get_process_path(pid)?;
-    let process_path = get_process_path(pid).await?.unwrap_or_default();
+    // let process_path = get_process_path(pid).await?.unwrap_or_default();
+
+    let (pid, pname) = find_process_name(sys::Network::Tcp, peer_addr.ip(), peer_addr.port())?;
+
     println!(
-        "get_process_path from :pid :{pid}  {:?} to {:?} ({}mics)",
+        "get_process_path from :pid :{pid} pname:{pname}, {:?} to {:?} ({}mics)",
         peer_addr,
         local_addr,
         instant.elapsed().as_micros()
     );
 
-    let process_path_str = process_path.to_string_lossy().to_string();
     // 检查是否在白名单中
-    if !whitelist.contains(&process_path_str.to_lowercase()) {
-        println!("Blocked process:pid:{pid}, {:?}", process_path);
+    if !whitelist.contains(&pname.to_lowercase()) {
+        println!("Blocked process:pid:{pid}, {:?}", pname);
         return Err(anyhow::anyhow!("Process not in whitelist"));
     }
-    println!("Allowed process: pid:{pid}, {:?}", process_path);
+    println!("Allowed process: pid:{pid}, {:?}", pname);
 
     // SOCKS5 协议处理
     let mut buffer = [0u8; 256];
