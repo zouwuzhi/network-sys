@@ -8,7 +8,10 @@ use std::time::Instant;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
-use crate::sys::macos::find_process_name;
+use crate::sys::NetWorkTuple;
+
+use crate::sys::linux::find_process_name;
+// use crate::sys::macos::find_process_name;
 
 // 白名单：允许的程序路径
 const WHITELIST: &[&str] = &[
@@ -40,22 +43,10 @@ async fn handle_client(mut stream: TcpStream, whitelist: &HashSet<String>) -> Re
     // 获取客户端进程 ID
 
     let instant = Instant::now();
-    // let pid = get_process_id_by_local_port(peer_addr.port())?;
-    // let pid = get_process_id_by_local_port(peer_addr.ip(), peer_addr.port())
-    //     .await?
-    //     .unwrap_or_default();
-    // println!(
-    //     "get_process_id_by_local_port : pid:{pid} from {:?} to {:?} ({}mics)",
-    //     peer_addr,
-    //     local_addr,
-    //     instant.elapsed().as_micros()
-    // );
 
-    let instant = Instant::now();
-    // let process_path = get_process_path(pid)?;
-    // let process_path = get_process_path(pid).await?.unwrap_or_default();
+    let tuple = NetWorkTuple::new_tcp(peer_addr.ip(), peer_addr.port(), peer_addr.ip(), 1080);
 
-    let (pid, pname) = find_process_name(sys::Network::Tcp, peer_addr.ip(), peer_addr.port())?;
+    let (pid, pname) = find_process_name(tuple)?;
 
     println!(
         "get_process_path from :pid :{pid} pname:{pname}, {:?} to {:?} ({}mics)",
