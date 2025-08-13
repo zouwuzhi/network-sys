@@ -14,7 +14,7 @@ use netlink_packet_sock_diag::{
 use netlink_sys::{Socket, SocketAddr, protocols::NETLINK_SOCK_DIAG};
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
-use crate::sys::{NetWorkTuple, Network, ProcessError};
+use crate::process::{NetWorkTuple, Network, ProcessError};
 
 /// 根据本地 IP 和端口获取进程 ID（PID）。
 /// 返回 `Ok(Some(pid))` 如果找到，`Ok(None)` 如果未找到，`Err` 如果出错。
