@@ -64,7 +64,7 @@ fn get_inode_by_netlink(net_tuple: NetWorkTuple) -> Result<(u32, u32), ProcessEr
 
     let req = InetRequest {
         family: AF_INET,
-        protocol: protocol,
+        protocol,
         extensions: ExtensionFlags::INFO,
         states: StateFlags::ESTABLISHED, //
         socket_id: sockid,

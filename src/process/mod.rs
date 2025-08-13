@@ -12,7 +12,6 @@ mod macos;
 #[cfg(target_os = "windows")]
 mod windows;
 
-
 // 重新导出 find_process_name
 #[cfg(any(target_os = "linux", target_os = "android"))]
 pub use linux::find_process_name;
@@ -22,6 +21,7 @@ pub use macos::find_process_name;
 pub use windows::find_process_name;
 
 #[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
 pub struct NetWorkTuple {
     network: Network,
     src_ip: IpAddr,
@@ -59,6 +59,10 @@ impl NetWorkTuple {
             dst_ip,
             dst_port,
         }
+    }
+
+    pub fn is_v4(&self) -> bool {
+        self.src_ip.is_ipv4()
     }
 }
 

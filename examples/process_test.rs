@@ -1,4 +1,3 @@
-mod process;
 
 use anyhow::{Context, Result};
 use std::collections::HashSet;
@@ -7,10 +6,8 @@ use std::path::PathBuf;
 use std::time::Instant;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
-
-use crate::process::NetWorkTuple;
-
-
+use network_utils::process;
+use network_utils::process::NetWorkTuple;
 
 // 白名单：允许的程序路径
 const WHITELIST: &[&str] = &[
@@ -25,8 +22,6 @@ const WHITELIST: &[&str] = &[
     r"Google Chrome Helper",
     r"curl",
 ];
-
-// 获取 TCP 连接对应的进程 ID
 
 // 检查进程是否在白名单中
 fn is_process_allowed(process_path: &PathBuf) -> bool {
