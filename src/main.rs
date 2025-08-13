@@ -1,4 +1,4 @@
-mod sys;
+mod process;
 
 use anyhow::{Context, Result};
 use std::collections::HashSet;
@@ -8,10 +8,9 @@ use std::time::Instant;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
-use crate::sys::NetWorkTuple;
+use crate::process::NetWorkTuple;
 
-use crate::sys::linux::find_process_name;
-// use crate::sys::macos::find_process_name;
+
 
 // 白名单：允许的程序路径
 const WHITELIST: &[&str] = &[
@@ -46,7 +45,7 @@ async fn handle_client(mut stream: TcpStream, whitelist: &HashSet<String>) -> Re
 
     let tuple = NetWorkTuple::new_tcp(peer_addr.ip(), peer_addr.port(), peer_addr.ip(), 1080);
 
-    let (pid, pname) = find_process_name(tuple)?;
+    let (pid, pname) = process::find_process_name(tuple)?;
 
     println!(
         "get_process_path from :pid :{pid} pname:{pname}, {:?} to {:?} ({}mics)",

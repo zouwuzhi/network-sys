@@ -12,9 +12,7 @@ rayon = "1.8"
 socket2 = { version = "0.5", features = ["all"] }
 libc = "0.2.141"
 
-netlink-packet-core = "0.7"
-netlink-packet-sock-diag = "0.4"
-netlink-sys = {version = "0.8",features = ["tokio_socket"] }
+
 
 
 sysctl = { version = "0.5" } # macOS

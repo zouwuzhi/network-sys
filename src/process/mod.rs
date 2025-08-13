@@ -1,5 +1,4 @@
 use std::{
-    fmt::write,
     io,
     net::{IpAddr, Ipv4Addr},
 };
@@ -7,11 +6,20 @@ use std::{
 use thiserror::Error;
 
 #[cfg(any(target_os = "linux", target_os = "android"))]
-pub mod linux;
+mod linux;
 #[cfg(target_os = "macos")]
-pub mod macos;
+mod macos;
 #[cfg(target_os = "windows")]
 mod windows;
+
+
+// 重新导出 find_process_name
+#[cfg(any(target_os = "linux", target_os = "android"))]
+pub use linux::find_process_name;
+#[cfg(target_os = "macos")]
+pub use macos::find_process_name;
+#[cfg(target_os = "windows")]
+pub use windows::find_process_name;
 
 #[derive(Debug, Clone, Copy)]
 pub struct NetWorkTuple {
@@ -62,14 +70,15 @@ pub enum Network {
 
 #[derive(Debug, Error)]
 pub enum ProcessError {
-    #[error("InvalidNetwork")]
-    InvalidNetwork,
+    #[error("InvalidData:{0}")]
+    InvalidData(String),
+
     #[error("notfound")]
     NotFound,
+
+    #[cfg(target_os = "macos")]
     #[error("sysctl read error:{0}")]
-    SysctlError(String),
-    #[error("proc read error:{0}")]
-    ProcInfoError(i32),
+    SysctlError(#[from] sysctl::SysctlError),
 
     #[error("name read error:{0}")]
     NameReadError(String),
