@@ -1,17 +1,17 @@
 use crate::process::{NetWorkTuple, Network, ProcessError};
+use std::ffi::c_void;
 use std::net::IpAddr;
-use windows::Win32::Foundation::CloseHandle;
-use windows::Win32::NetworkManagement::IpHelper::{
+use windows_sys::Win32::Foundation::{CloseHandle, ERROR_INSUFFICIENT_BUFFER};
+use windows_sys::Win32::NetworkManagement::IpHelper::{
     GetExtendedTcpTable, GetExtendedUdpTable, MIB_TCP6ROW_OWNER_PID, MIB_TCP6TABLE_OWNER_PID,
     MIB_TCPTABLE_OWNER_PID, MIB_UDP6ROW_OWNER_PID, MIB_UDP6TABLE_OWNER_PID, MIB_UDPTABLE_OWNER_PID,
     TCP_TABLE_OWNER_PID_ALL, UDP_TABLE_OWNER_PID,
 };
-use windows::Win32::Networking::WinSock::{AF_INET, AF_INET6};
-use windows::Win32::System::ProcessStatus::GetModuleFileNameExW;
-use windows::Win32::System::Threading::{
+use windows_sys::Win32::Networking::WinSock::{AF_INET, AF_INET6};
+use windows_sys::Win32::System::ProcessStatus::GetModuleFileNameExW;
+use windows_sys::Win32::System::Threading::{
     GetCurrentProcessId, OpenProcess, PROCESS_QUERY_INFORMATION, PROCESS_VM_READ,
 };
-use windows::core::HSTRING;
 
 /// 根据网络元组获取进程 ID 和名称
 pub fn find_process_name(net_tuple: NetWorkTuple) -> Result<(u32, String), ProcessError> {
@@ -57,9 +57,9 @@ fn get_pid_by_udp_net(net_tuple: NetWorkTuple) -> Result<u32, ProcessError> {
 /// 获取地址族
 fn get_address_family(net_tuple: &NetWorkTuple) -> u32 {
     if net_tuple.is_v4() {
-        AF_INET.0 as u32
+        AF_INET as u32
     } else {
-        AF_INET6.0 as u32
+        AF_INET6 as u32
     }
 }
 
@@ -67,29 +67,40 @@ fn get_address_family(net_tuple: &NetWorkTuple) -> u32 {
 fn get_extended_tcp_table(af_inet: u32) -> Result<Vec<u8>, ProcessError> {
     let mut buffer_size: u32 = 0;
 
-    unsafe {
+    // 第一次调用获取所需缓冲区大小
+    let result = unsafe {
         GetExtendedTcpTable(
-            None,
+            std::ptr::null_mut(),
             &mut buffer_size,
-            false,
-            af_inet,
-            TCP_TABLE_OWNER_PID_ALL,
-            0,
-        );
-    }
-
-    let mut buffer = vec![0u8; buffer_size as usize];
-
-    unsafe {
-        GetExtendedTcpTable(
-            Some(buffer.as_mut_ptr() as _),
-            &mut buffer_size,
-            false,
+            0, // false
             af_inet,
             TCP_TABLE_OWNER_PID_ALL,
             0,
         )
     };
+
+    // 检查是否是缓冲区不足的错误
+    if result != 0 && result != ERROR_INSUFFICIENT_BUFFER {
+        return Err(ProcessError::NotFound);
+    }
+
+    let mut buffer = vec![0u8; buffer_size as usize];
+
+    // 第二次调用获取实际数据
+    let result = unsafe {
+        GetExtendedTcpTable(
+            buffer.as_mut_ptr() as *mut c_void,
+            &mut buffer_size,
+            0, // false
+            af_inet,
+            TCP_TABLE_OWNER_PID_ALL,
+            0,
+        )
+    };
+
+    if result != 0 {
+        return Err(ProcessError::NotFound);
+    }
 
     Ok(buffer)
 }
@@ -98,29 +109,40 @@ fn get_extended_tcp_table(af_inet: u32) -> Result<Vec<u8>, ProcessError> {
 fn get_extended_udp_table(af_inet: u32) -> Result<Vec<u8>, ProcessError> {
     let mut buffer_size: u32 = 0;
 
-    unsafe {
+    // 第一次调用获取所需缓冲区大小
+    let result = unsafe {
         GetExtendedUdpTable(
-            None,
+            std::ptr::null_mut(),
             &mut buffer_size,
-            false,
-            af_inet,
-            UDP_TABLE_OWNER_PID,
-            0,
-        );
-    }
-
-    let mut buffer = vec![0u8; buffer_size as usize];
-
-    unsafe {
-        GetExtendedUdpTable(
-            Some(buffer.as_mut_ptr() as _),
-            &mut buffer_size,
-            false,
+            0, // false
             af_inet,
             UDP_TABLE_OWNER_PID,
             0,
         )
     };
+
+    // 检查是否是缓冲区不足的错误
+    if result != 0 && result != ERROR_INSUFFICIENT_BUFFER {
+        return Err(ProcessError::NotFound);
+    }
+
+    let mut buffer = vec![0u8; buffer_size as usize];
+
+    // 第二次调用获取实际数据
+    let result = unsafe {
+        GetExtendedUdpTable(
+            buffer.as_mut_ptr() as *mut c_void,
+            &mut buffer_size,
+            0, // false
+            af_inet,
+            UDP_TABLE_OWNER_PID,
+            0,
+        )
+    };
+
+    if result != 0 {
+        return Err(ProcessError::NotFound);
+    }
 
     Ok(buffer)
 }
@@ -239,19 +261,22 @@ fn get_process_path(pid: u32) -> Result<String, ProcessError> {
     }
 
     let handle = unsafe {
-        OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, false, pid).map_err(|e| {
-            ProcessError::NameReadError(format!("OpenProcess failed for PID {pid}: {e}"))
-        })?
+        OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, 0, pid) // 0 means false
     };
 
     let mut buffer: [u16; 1024] = [0; 1024];
-    let len = unsafe { GetModuleFileNameExW(handle, None, &mut buffer) };
+    let len = unsafe {
+        GetModuleFileNameExW(
+            handle,
+            std::ptr::null_mut(),
+            buffer.as_mut_ptr(),
+            buffer.len() as u32,
+        )
+    };
 
     unsafe {
-        CloseHandle(handle).map_err(|e| {
-            ProcessError::NameReadError(format!("CloseHandle failed for PID {pid}: {e}"))
-        })?
-    };
+        CloseHandle(handle);
+    }
 
     if len == 0 {
         return Err(ProcessError::NameReadError(format!(
@@ -259,9 +284,9 @@ fn get_process_path(pid: u32) -> Result<String, ProcessError> {
         )));
     }
 
-    HSTRING::from_wide(&buffer[..len as usize])
-        .map_err(|e| {
-            ProcessError::NameReadError(format!("HSTRING conversion failed for PID {pid}: {e}"))
-        })
-        .map(|hstring| hstring.to_string())
+    // 手动将 UTF-16 转换为 String
+    let wide_str: &[u16] = &buffer[..len as usize];
+    String::from_utf16(wide_str).map_err(|e| {
+        ProcessError::NameReadError(format!("UTF-16 conversion failed for PID {pid}: {e}"))
+    })
 }
